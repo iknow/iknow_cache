@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 class IknowCache
   def self.register_group(name, key_name, default_options: nil, static_version: nil)
     group = CacheGroup.new(nil, name, key_name, default_options, static_version)
@@ -59,7 +61,10 @@ class IknowCache
     # Fetch the path for this cache. We allow the parent_path to be precomputed
     # to save hitting the cache multiple times for its version.
     def path(key, parent_path = nil)
-      key_value     = key[self.key_name] or raise ArgumentError.new("Required cache key missing: #{self.key_name}")
+      if key.nil? || !key.has_key?(self.key_name)
+        raise ArgumentError.new("Missing required key '#{self.key_name}' for cache '#{self.name}'")
+      end
+      key_value     = key[self.key_name]
       parent_path ||= self.parent_path(key)
       version       = self.version(parent_path)
       path_string(parent_path, version, key_value)
@@ -162,8 +167,7 @@ class IknowCache
       @cache_options = IknowCache::merge_options(cache_group.default_options, cache_options).try { |x| x.dup.freeze }
     end
 
-    def fetch(key, options = nil, &block)
-      parent_path = options.try(:delete, :parent_path)
+    def fetch(key, parent_path: nil, **options, &block)
       p = path(key, parent_path)
       Rails.logger.debug("Cache Fetch: #{p}") if DEBUG
       v = Rails.cache.fetch(p, IknowCache::merge_options(cache_options, options), &block)
@@ -171,8 +175,7 @@ class IknowCache
       v
     end
 
-    def read(key, options = nil)
-      parent_path = options.try(:delete, :parent_path)
+    def read(key, parent_path: nil, **options)
       p = path(key, parent_path)
       Rails.logger.debug("Cache Read: #{p}") if DEBUG
       v = Rails.cache.read(p, IknowCache::merge_options(cache_options, options))
@@ -180,15 +183,13 @@ class IknowCache
       v
     end
 
-    def write(key, value, options = nil)
-      parent_path = options.try(:delete, :parent_path)
+    def write(key, value, parent_path: nil, **options)
       p = path(key, parent_path)
       Rails.logger.debug("Cache Store: #{p} (#{IknowCache::merge_options(cache_options, options).inspect})") if DEBUG
       Rails.cache.write(p, value, IknowCache::merge_options(cache_options, options))
     end
 
-    def delete(key, options = nil)
-      parent_path = options.try(:delete, :parent_path)
+    def delete(key, parent_path: nil, **options)
       p = path(key, parent_path)
       Rails.logger.debug("Cache Delete: #{p}") if DEBUG
       Rails.cache.delete(p, IknowCache::merge_options(cache_options, options))
@@ -196,9 +197,14 @@ class IknowCache
 
     def read_multi(keys)
       return {} if keys.blank?
-      paths = path_multi(keys)
-      Rails.logger.debug("Cache Multi-Read: #{paths.inspect}") if DEBUG
-      vs = Rails.cache.read_multi(*paths)
+      key_paths = path_multi(keys)
+      path_keys = key_paths.invert
+
+      Rails.logger.debug("Cache Multi-Read: #{paths.keys.inspect}") if DEBUG
+      raw = Rails.cache.read_multi(*key_paths.values)
+      vs = raw.each_with_object({}) do |(path, value), h|
+        h[path_keys[path]] = value
+      end
       Rails.logger.debug("=> #{vs.inspect}") if DEBUG
       vs
     end
@@ -224,8 +230,8 @@ class IknowCache
     end
 
     def path_multi(keys)
-      @cache_group.path_multi(keys).values.map! do |group_path|
-        path_string(group_path)
+      @cache_group.path_multi(keys).each_with_object({}) do |(key, group_path), h|
+        h[key] = path_string(group_path)
       end
     end
 
