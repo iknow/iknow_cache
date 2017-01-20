@@ -220,8 +220,6 @@ class IknowCache
       end
     end
 
-    # delegate :parent_path, :key, to: :cache_group
-
     private
 
     def path(key, parent_path = nil)
