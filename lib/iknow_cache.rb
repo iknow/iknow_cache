@@ -185,7 +185,10 @@ class IknowCache
 
     def write(key, value, parent_path: nil, **options)
       p = path(key, parent_path)
-      Rails.logger.debug("Cache Store: #{p} (#{IknowCache::merge_options(cache_options, options).inspect})") if DEBUG
+      if DEBUG
+        Rails.logger.debug("Cache Store: #{p} (#{IknowCache::merge_options(cache_options, options).inspect})")
+        Rails.logger.debug("<= #{value.inspect}")
+      end
       Rails.cache.write(p, value, IknowCache::merge_options(cache_options, options))
     end
 
@@ -200,7 +203,7 @@ class IknowCache
       key_paths = path_multi(keys)
       path_keys = key_paths.invert
 
-      Rails.logger.debug("Cache Multi-Read: #{paths.keys.inspect}") if DEBUG
+      Rails.logger.debug("Cache Multi-Read: #{key_paths.values.inspect}") if DEBUG
       raw = Rails.cache.read_multi(*key_paths.values)
       vs = raw.each_with_object({}) do |(path, value), h|
         h[path_keys[path]] = value
