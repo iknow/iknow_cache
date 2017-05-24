@@ -27,7 +27,7 @@ class IknowCache::Test < ActiveSupport::TestCase
   def test_cache_path
     group = IknowCache.register_group(:group, :id)
     cache = group.register_cache(:store)
-    assert_equal("#{@root}/group/1/10/store", cache.send(:path))
+    assert_equal("#{@root}/group/1/10/store", cache.send(:path, {id: 10}))
   end
 
   def test_null_key

@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/iknow/iknow_cache.svg?branch=master)](https://travis-ci.org/iknow/iknow_cache)
+
 # IknowCache
 
 iKnow's versioned nested cache backed by Rails cache
