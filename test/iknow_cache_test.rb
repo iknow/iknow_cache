@@ -10,24 +10,24 @@ class IknowCache::Test < ActiveSupport::TestCase
 
   def test_path
     group = IknowCache.register_group(:group, :id)
-    assert_equal("#{@root}/group/1/10", group.path(id: 10))
+    assert_equal("#{@root}/group/1/1/10", group.path(id: 10))
   end
 
   def test_child_path
     group = IknowCache.register_group(:parentgroup, :parentid)
     childgroup = group.register_child_group(:childgroup, :childid)
-    assert_equal("#{@root}/parentgroup/1/10/childgroup/1/20", childgroup.path(parentid: 10, childid: 20))
+    assert_equal("#{@root}/parentgroup/1/1/10/childgroup/1/1/20", childgroup.path(parentid: 10, childid: 20))
   end
 
   def test_static_path
     group = IknowCache.register_group(:group, :id, static_version: 99)
-    assert_equal("#{@root}/group/99/10", group.path(id: 10))
+    assert_equal("#{@root}/group/99/1/10", group.path(id: 10))
   end
 
   def test_cache_path
     group = IknowCache.register_group(:group, :id)
     cache = group.register_cache(:store)
-    assert_equal("#{@root}/group/1/10/store", cache.send(:path, {id: 10}))
+    assert_equal("#{@root}/group/1/1/10/store", cache.send(:path, { id: 10 }))
   end
 
   def test_null_key
@@ -57,8 +57,8 @@ class IknowCache::Test < ActiveSupport::TestCase
     paths = childgroup.path_multi([{parentid: 10, childid: 20}, {parentid: 11, childid: 21}])
 
     expected = {
-      {parentid: 10, childid: 20} => "#{@root}/parentgroup/1/10/childgroup/2/20",
-      {parentid: 11, childid: 21} => "#{@root}/parentgroup/1/11/childgroup/1/21",
+      { parentid: 10, childid: 20 } => "#{@root}/parentgroup/1/1/10/childgroup/1/2/20",
+      { parentid: 11, childid: 21 } => "#{@root}/parentgroup/1/1/11/childgroup/1/1/21",
     }
 
     assert_equal(expected, paths)
@@ -66,27 +66,20 @@ class IknowCache::Test < ActiveSupport::TestCase
 
   def test_invalidate_group
     group = IknowCache.register_group(:group, :id)
-    assert_equal("#{@root}/group/1/10", group.path(id: 10))
+    assert_equal("#{@root}/group/1/1/10", group.path(id: 10))
     group.invalidate_cache_group
-    assert_equal("#{@root}/group/2/10", group.path(id: 10))
+    assert_equal("#{@root}/group/1/2/10", group.path(id: 10))
   end
 
   def test_invalidate_child_group
-    group = IknowCache.register_group(:parentgroup, :parentid)
-    childgroup = group.register_child_group(:childgroup, :childid)
-    assert_equal("#{@root}/parentgroup/1/10/childgroup/1/20", childgroup.path(parentid: 10, childid: 20))
+    group = IknowCache.register_group(:parentgroup, :parentid, static_version: 5)
+    childgroup = group.register_child_group(:childgroup, :childid, static_version: 6)
+    assert_equal("#{@root}/parentgroup/5/1/10/childgroup/6/1/20", childgroup.path(parentid: 10, childid: 20))
     childgroup.invalidate_cache_group(parentid: 10)
-    assert_equal("#{@root}/parentgroup/1/10/childgroup/2/20", childgroup.path(parentid: 10, childid: 20))
-    assert_equal("#{@root}/parentgroup/1/11/childgroup/1/20", childgroup.path(parentid: 11, childid: 20))
+    assert_equal("#{@root}/parentgroup/5/1/10/childgroup/6/2/20", childgroup.path(parentid: 10, childid: 20))
+    assert_equal("#{@root}/parentgroup/5/1/11/childgroup/6/1/20", childgroup.path(parentid: 11, childid: 20))
   end
 
-  def test_cant_invalidate_static_group
-    group = IknowCache.register_group(:group, :id, static_version: 99)
-    ex = assert_raises(ArgumentError) do
-      group.invalidate_cache_group
-    end
-    assert_match(/Cannot invalidate statically versioned/, ex.message)
-  end
 
   def test_access
     group = IknowCache.register_group(:group, :id)
