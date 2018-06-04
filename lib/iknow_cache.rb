@@ -1,7 +1,7 @@
 # encoding: UTF-8
 
 class IknowCache
-  def self.register_group(name, key_name, default_options: nil, static_version: nil)
+  def self.register_group(name, key_name, default_options: nil, static_version: 1)
     group = CacheGroup.new(nil, name, key_name, default_options, static_version)
     yield group if block_given?
     group
@@ -22,7 +22,7 @@ class IknowCache
       @children        = []
     end
 
-    def register_child_group(name, key_name, default_options: nil, static_version: nil)
+    def register_child_group(name, key_name, default_options: nil, static_version: 1)
       group = CacheGroup.new(self, name, key_name, default_options, static_version)
       @children << group
       yield group if block_given?
@@ -50,12 +50,8 @@ class IknowCache
     # Clear all keys in this cache group (for the given parent),
     # invalidating all caches in it and its children
     def invalidate_cache_group(parent_key = nil)
-      if @static_version.nil?
-        parent_path = self.parent_path(parent_key)
-        Rails.cache.increment(version_path_string(parent_path))
-      else
-        raise ArgumentError.new("Cannot invalidate statically versioned cache group")
-      end
+      parent_path = self.parent_path(parent_key)
+      Rails.cache.increment(version_path_string(parent_path))
     end
 
     # Fetch the path for this cache. We allow the parent_path to be precomputed
@@ -81,11 +77,7 @@ class IknowCache
     end
 
     def version(parent_path)
-      if @static_version.nil?
-        Rails.cache.fetch(version_path_string(parent_path), raw: true) { 1 }
-      else
-        @static_version
-      end
+      Rails.cache.fetch(version_path_string(parent_path), raw: true) { 1 }
     end
 
     # compute multiple paths at once: returns { key => path }
@@ -119,36 +111,32 @@ class IknowCache
 
     # Look up multiple versions at once, returns { parent_path => version }
     def version_multi(parent_paths)
-      if @static_version.nil?
-        # compute version paths
-        version_by_pp = parent_paths.each_with_object({}) { |pp, h| h[pp] = version_path_string(pp) }
-        version_paths = version_by_pp.values
+      # compute version paths
+      version_by_pp = parent_paths.each_with_object({}) { |pp, h| h[pp] = version_path_string(pp) }
+      version_paths = version_by_pp.values
 
-        # look up versions in cache
-        versions = Rails.cache.read_multi(*version_paths, raw: true)
+      # look up versions in cache
+      versions = Rails.cache.read_multi(*version_paths, raw: true)
 
-        version_paths.each do |vp|
-          next if versions.has_key?(vp)
-          versions[vp] = Rails.cache.fetch(vp, raw: true) { 1 }
-        end
-
-        # swap in the versions
-        parent_paths.each do |pp|
-          vp = version_by_pp[pp]
-          version = versions[vp]
-          version_by_pp[pp] = version
-        end
-
-        version_by_pp
-      else
-        Hash.new(@static_version)
+      version_paths.each do |vp|
+        next if versions.has_key?(vp)
+        versions[vp] = Rails.cache.fetch(vp, raw: true) { 1 }
       end
+
+      # swap in the versions
+      parent_paths.each do |pp|
+        vp = version_by_pp[pp]
+        version = versions[vp]
+        version_by_pp[pp] = version
+      end
+
+      version_by_pp
     end
 
     private
 
     def path_string(parent_path, version, value)
-      "#{parent_path}/#{name}/#{version}/#{value}"
+      "#{parent_path}/#{name}/#{@static_version}/#{version}/#{value}"
     end
 
     def version_path_string(parent_path)
