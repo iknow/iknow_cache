@@ -57,7 +57,7 @@ class IknowCache
     # Fetch the path for this cache. We allow the parent_path to be precomputed
     # to save hitting the cache multiple times for its version.
     def path(key, parent_path = nil)
-      if key.nil? || !key.has_key?(self.key_name)
+      if key.nil? || key[self.key_name].nil?
         raise ArgumentError.new("Missing required key '#{self.key_name}' for cache '#{self.name}'")
       end
       key_value     = key[self.key_name]
@@ -210,6 +210,8 @@ class IknowCache
         Rails.cache.write(key_paths[key], value, options)
       end
     end
+
+    delegate :key, to: :cache_group
 
     private
 

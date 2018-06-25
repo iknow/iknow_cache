@@ -24,10 +24,16 @@ class IknowCache::Test < ActiveSupport::TestCase
     assert_equal("#{@root}/group/99/1/10", group.path(id: 10))
   end
 
-  def test_cache_path
+  def test_cache_path_hash
     group = IknowCache.register_group(:group, :id)
     cache = group.register_cache(:store)
     assert_equal("#{@root}/group/1/1/10/store", cache.send(:path, { id: 10 }))
+  end
+
+  def test_cache_path_key
+    group = IknowCache.register_group(:group, :id)
+    cache = group.register_cache(:store)
+    assert_equal("#{@root}/group/1/1/10/store", cache.send(:path, cache.key.new(10)))
   end
 
   def test_null_key
@@ -38,7 +44,7 @@ class IknowCache::Test < ActiveSupport::TestCase
     assert_match(/Missing required key/, ex.message)
   end
 
-  def test_missing_key
+  def test_missing_key_hash
     group = IknowCache.register_group(:group, :id)
     ex = assert_raises(ArgumentError) do
       group.path({})
@@ -46,7 +52,15 @@ class IknowCache::Test < ActiveSupport::TestCase
     assert_match(/Missing required key/, ex.message)
   end
 
-  def test_path_multi
+  def test_missing_key_struct
+    group = IknowCache.register_group(:group, :id)
+    ex = assert_raises(ArgumentError) do
+      group.path(group.key.new(nil))
+    end
+    assert_match(/Missing required key/, ex.message)
+  end
+
+  def test_path_multi_hash
     group = IknowCache.register_group(:parentgroup, :parentid)
     childgroup = group.register_child_group(:childgroup, :childid)
 
@@ -63,6 +77,28 @@ class IknowCache::Test < ActiveSupport::TestCase
 
     assert_equal(expected, paths)
   end
+
+  def test_path_multi_key
+    group      = IknowCache.register_group(:parentgroup, :parentid)
+    childgroup = group.register_child_group(:childgroup, :childid)
+
+    # Bump version of one child group
+    childgroup.path(parentid: 10, childid: 1)
+    childgroup.invalidate_cache_group(parentid: 10)
+
+    k1 = childgroup.key.new(10, 20)
+    k2 = childgroup.key.new(11, 21)
+
+    paths = childgroup.path_multi([childgroup.key.new(10, 20), childgroup.key.new(11, 21)])
+
+    expected = {
+      k1 => "#{@root}/parentgroup/1/1/10/childgroup/1/2/20",
+      k2 => "#{@root}/parentgroup/1/1/11/childgroup/1/1/21",
+    }
+
+    assert_equal(expected, paths)
+  end
+
 
   def test_invalidate_group
     group = IknowCache.register_group(:group, :id)
