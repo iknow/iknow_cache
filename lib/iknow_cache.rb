@@ -60,6 +60,7 @@ class IknowCache
       if key.nil? || key[self.key_name].nil?
         raise ArgumentError.new("Missing required key '#{self.key_name}' for cache '#{self.name}'")
       end
+
       key_value     = key[self.key_name]
       parent_path ||= self.parent_path(key)
       version       = self.version(parent_path)
@@ -124,6 +125,7 @@ class IknowCache
 
       version_paths.each do |vp|
         next if versions.has_key?(vp)
+
         versions[vp] = Rails.cache.fetch(vp, raw: true) { 1 }
       end
 
@@ -192,6 +194,7 @@ class IknowCache
 
     def read_multi(keys)
       return {} if keys.blank?
+
       key_paths = path_multi(keys)
       path_keys = key_paths.invert
 
@@ -206,6 +209,7 @@ class IknowCache
 
     def write_multi(entries, options = nil)
       return {} if entries.blank?
+
       key_paths = path_multi(entries.keys)
       options = IknowCache.merge_options(cache_options, options)
 
