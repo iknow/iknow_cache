@@ -76,8 +76,8 @@ jobs:
        - run:
            name: Publish to Rubygems
            command: |
-             gem build persistent_enum.gemspec
-             gem push persistent_enum-*.gem
+             gem build iknow_cache.gemspec
+             gem push iknow_cache-*.gem
 
 workflows:
   version: 2.1
