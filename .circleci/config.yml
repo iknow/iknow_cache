@@ -1,17 +1,35 @@
-version: 2
+version: 2.1
 
-jobs:
-  "rails-5-2": &job
-    parallelism: 1
-    docker: &job_docker
-      - &job_docker_ruby
-        image: circleci/ruby:2.6
-        environment: &job_docker_ruby_env
+executors:
+  ruby:
+    parameters:
+      ruby-version:
+        type: string
+        default: "2.6"
+      gemfile:
+        type: string
+        default: "Gemfile"
+    docker:
+      - image: circleci/ruby:<< parameters.ruby-version >>
+        environment:
           BUNDLE_JOBS: 3
           BUNDLE_RETRY: 3
           BUNDLE_PATH: vendor/bundle
           RAILS_ENV: test
-          BUNDLE_GEMFILE: gemfiles/rails_5_2.gemfile
+          BUNDLE_GEMFILE: << parameters.gemfile >>
+
+jobs:
+  test:
+    parameters:
+      ruby-version:
+        type: string
+      gemfile:
+        type: string
+    executor:
+      name: ruby
+      ruby-version: << parameters.ruby-version >>
+      gemfile: << parameters.gemfile >>
+    parallelism: 1
     steps:
       - checkout
 
@@ -26,7 +44,7 @@ jobs:
 
       - restore_cache:
           keys:
-            - iknow_cache-{{ checksum "/tmp/gem-lock" }}
+            - iknow_cache-<< parameters.ruby-version >>-{{ checksum "/tmp/gem-lock" }}
             - iknow_cache-
 
       - run:
@@ -34,13 +52,9 @@ jobs:
           command: bundle check || bundle install
 
       - save_cache:
-          key: iknow_cache-{{ checksum "/tmp/gem-lock" }}
+          key: iknow_cache-<< parameters.ruby-version >>-{{ checksum "/tmp/gem-lock" }}
           paths:
             - vendor/bundle
-
-      - run:
-          name: Wait for DB
-          command: dockerize -wait tcp://localhost:5432 -timeout 1m
 
       - run:
           name: Run minitest
@@ -49,17 +63,37 @@ jobs:
       - store_test_results:
           path: test/reports
 
-  "rails-6-0-beta":
-    <<: *job
-    docker:
-      - <<: *job_docker_ruby
-        environment:
-          <<: *job_docker_ruby_env
-          BUNDLE_GEMFILE: gemfiles/rails_6_0_beta.gemfile
+  publish:
+    executor: ruby
+    steps:
+       - checkout
+       - run:
+           name: Setup Rubygems
+           command: |
+             mkdir ~/.gem &&
+             echo -e "---\r\n:rubygems_api_key: $RUBYGEMS_API_KEY" > ~/.gem/credentials &&
+             chmod 0600 ~/.gem/credentials
+       - run:
+           name: Publish to Rubygems
+           command: |
+             gem build persistent_enum.gemspec
+             gem push persistent_enum-*.gem
 
 workflows:
-  version: 2
+  version: 2.1
   build:
     jobs:
-      - "rails-5-2"
-      - "rails-6-0-beta"
+      - test:
+          name: 'ruby 2.6 rails 5.2'
+          ruby-version: "2.6"
+          gemfile: gemfiles/rails_5_2.gemfile
+      - test:
+          name: 'ruby 2.6 rails 6.0'
+          ruby-version: "2.6"
+          gemfile: gemfiles/rails_6_0_beta.gemfile
+      - publish:
+          filters:
+            branches:
+              only: master
+            tags:
+              ignore: /.*/
