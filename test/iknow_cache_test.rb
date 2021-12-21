@@ -2,9 +2,9 @@
 
 require 'test_helper'
 
-class IknowCache::Test < ActiveSupport::TestCase
+class IknowCache::Test < MiniTest::Test
   def setup
-    Rails.cache.clear
+    IknowCache.cache.clear
     @root = IknowCache::CacheGroup::ROOT_PATH
   end
 
