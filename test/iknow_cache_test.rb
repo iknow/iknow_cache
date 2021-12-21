@@ -157,10 +157,10 @@ class IknowCache::Test < MiniTest::Test
     cache.write({id: 1}, "hello")
     cache.write({id: 2}, "goodbye")
 
-    group.delete_all(id: 1)
+    group.delete_all({id: 1})
 
-    assert_nil(cache.read(id: 1))
-    assert_equal("goodbye", cache.read(id: 2))
+    assert_nil(cache.read({id: 1}))
+    assert_equal("goodbye", cache.read({id: 2}))
   end
 
   def test_double_configre
