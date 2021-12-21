@@ -162,4 +162,10 @@ class IknowCache::Test < ActiveSupport::TestCase
     assert_nil(cache.read(id: 1))
     assert_equal("goodbye", cache.read(id: 2))
   end
+
+  def test_double_configre
+    assert_raises(ArgumentError) do
+      IknowCache.configure! {}
+    end
+  end
 end
