@@ -5,7 +5,7 @@ executors:
     parameters:
       ruby-version:
         type: string
-        default: "2.6"
+        default: "2.7"
       gemfile:
         type: string
         default: "Gemfile"
@@ -84,13 +84,17 @@ workflows:
   build:
     jobs:
       - test:
-          name: 'ruby 2.6 rails 5.2'
-          ruby-version: "2.6"
+          name: 'ruby 2.7 rails 5.2'
+          ruby-version: "2.7"
           gemfile: gemfiles/rails_5_2.gemfile
       - test:
-          name: 'ruby 2.6 rails 6.0'
-          ruby-version: "2.6"
-          gemfile: gemfiles/rails_6_0_beta.gemfile
+          name: 'ruby 3.0 rails 6.1'
+          ruby-version: "3.0"
+          gemfile: gemfiles/rails_6_1.gemfile
+      - test:
+          name: 'ruby 3.0 rails 7.0'
+          ruby-version: "3.0"
+          gemfile: gemfiles/rails_7_0.gemfile
       - publish:
           filters:
             branches:
