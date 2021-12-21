@@ -1,18 +1,25 @@
-# Configure Rails Environment
-ENV["RAILS_ENV"] = "test"
+require 'iknow_cache'
 
-require File.expand_path("../../test/dummy/config/environment.rb", __FILE__)
-ActiveRecord::Migrator.migrations_paths = [File.expand_path("../../test/dummy/db/migrate", __FILE__)]
-require "rails/test_help"
+require 'minitest/autorun'
+
+# Work around rails 7 bug
+# https://github.com/rails/rails/issues/43851
+begin
+  require "active_support/isolated_execution_state"
+rescue LoadError => _e
+  # This file isn't present for older rails versions, so ignore errors
+  # trying to load it.
+  nil
+end
+
+require 'active_support/logger'
+require 'active_support/cache'
 
 # Filter out Minitest backtrace while allowing backtrace from other libraries
 # to be shown.
 Minitest.backtrace_filter = Minitest::BacktraceFilter.new
 
-# Load fixtures from the engine
-if ActiveSupport::TestCase.respond_to?(:fixture_path=)
-  ActiveSupport::TestCase.fixture_path = File.expand_path("../fixtures", __FILE__)
-  ActionDispatch::IntegrationTest.fixture_path = ActiveSupport::TestCase.fixture_path
-  ActiveSupport::TestCase.file_fixture_path = ActiveSupport::TestCase.fixture_path + "/files"
-  ActiveSupport::TestCase.fixtures :all
+IknowCache.configure! do
+  logger ActiveSupport::Logger.new(STDOUT)
+  cache ActiveSupport::Cache::MemoryStore.new
 end
