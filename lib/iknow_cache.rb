@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require "active_support"
-require "active_support/core_ext/module/delegation"
-
 class IknowCache
   Config = Struct.new(:logger, :cache)
 
@@ -34,7 +31,14 @@ class IknowCache
 
   class << self
     attr_reader :config
-    delegate :logger, :cache, to: :config
+
+    def logger
+      config.logger
+    end
+
+    def cache
+      config.cache
+    end
   end
 
   def self.register_group(name, key_name, default_options: nil, static_version: 1)
@@ -255,7 +259,9 @@ class IknowCache
       end
     end
 
-    delegate :key, to: :cache_group
+    def key
+      cache_group.key
+    end
 
     private
 
