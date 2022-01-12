@@ -2,9 +2,9 @@
 
 require 'test_helper'
 
-class IknowCache::Test < ActiveSupport::TestCase
+class IknowCache::Test < MiniTest::Test
   def setup
-    Rails.cache.clear
+    IknowCache.cache.clear
     @root = IknowCache::CacheGroup::ROOT_PATH
   end
 
@@ -157,9 +157,15 @@ class IknowCache::Test < ActiveSupport::TestCase
     cache.write({id: 1}, "hello")
     cache.write({id: 2}, "goodbye")
 
-    group.delete_all(id: 1)
+    group.delete_all({id: 1})
 
-    assert_nil(cache.read(id: 1))
-    assert_equal("goodbye", cache.read(id: 2))
+    assert_nil(cache.read({id: 1}))
+    assert_equal("goodbye", cache.read({id: 2}))
+  end
+
+  def test_double_configre
+    assert_raises(ArgumentError) do
+      IknowCache.configure! {}
+    end
   end
 end

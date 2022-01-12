@@ -3,6 +3,6 @@
 source "https://rubygems.org"
 
 gem "byebug", group: [:development, :test]
-gem "activesupport", "~> 5.2.0"
+gem "activesupport", "~> 7.0.0"
 
 gemspec path: "../"
