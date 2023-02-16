@@ -1,6 +1,7 @@
 require 'iknow_cache'
 
 require 'minitest/autorun'
+require 'minitest/ci'
 
 require 'active_support'
 require 'active_support/logger'
