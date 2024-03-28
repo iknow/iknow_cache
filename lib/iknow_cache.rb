@@ -69,8 +69,8 @@ class IknowCache
       group
     end
 
-    def register_cache(name, cache_options: nil)
-      c = Cache.new(self, name, cache_options)
+    def register_cache(name, static_version: nil, cache_options: nil)
+      c = Cache.new(self, name, static_version, cache_options)
       @caches << c
       c
     end
@@ -193,12 +193,13 @@ class IknowCache
   class Cache
     DEBUG = false
 
-    attr_reader :name, :cache_options, :cache_group
+    attr_reader :name, :static_version, :cache_options, :cache_group
 
-    def initialize(cache_group, name, cache_options)
-      @cache_group   = cache_group
-      @name          = name
-      @cache_options = IknowCache.merge_options(cache_group.default_options, cache_options).try { |x| x.dup.freeze }
+    def initialize(cache_group, name, static_version, cache_options)
+      @cache_group    = cache_group
+      @name           = name
+      @static_version = static_version
+      @cache_options  = IknowCache.merge_options(cache_group.default_options, cache_options).try { |x| x.dup.freeze }
     end
 
     def fetch(key, parent_path: nil, **options, &block)
@@ -275,7 +276,9 @@ class IknowCache
     end
 
     def path_string(group_path)
-      "#{group_path}/#{self.name}"
+      path = "#{group_path}/#{self.name}"
+      path = "#{path}/#{self.static_version}" if static_version
+      path
     end
   end
 

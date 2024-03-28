@@ -36,6 +36,12 @@ class IknowCache::Test < MiniTest::Test
     assert_equal("#{@root}/group/1/1/10/store", cache.send(:path, cache.key.new(10)))
   end
 
+  def test_statically_versioned_cache_path
+    group = IknowCache.register_group(:group, :id)
+    cache = group.register_cache(:store, static_version: 100)
+    assert_equal("#{@root}/group/1/1/10/store/100", cache.send(:path, cache.key.new(10)))
+  end
+
   def test_null_key
     group = IknowCache.register_group(:group, :id)
     ex = assert_raises(ArgumentError) do
