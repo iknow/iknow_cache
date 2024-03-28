@@ -18,11 +18,11 @@ class IknowCache
   end
 
   def self.configured?
-    ! config.nil?
+    !config.nil?
   end
 
   def self.configure!(&block)
-    raise ArgumentError.new("Already configured!") if configured?
+    raise ArgumentError.new('Already configured!') if configured?
 
     config = Config.new
     ConfigWriter.new(config).instance_eval(&block)
@@ -240,9 +240,7 @@ class IknowCache
 
       IknowCache.logger.debug("Cache Multi-Read: #{key_paths.values.inspect}") if DEBUG
       raw = IknowCache.cache.read_multi(*key_paths.values)
-      vs = raw.each_with_object({}) do |(path, value), h|
-        h[path_keys[path]] = value
-      end
+      vs = raw.transform_keys { |path| path_keys[path] }
       IknowCache.logger.debug("=> #{vs.inspect}") if DEBUG
       vs
     end

@@ -68,7 +68,7 @@ class IknowCache::Test < MiniTest::Test
     childgroup.path(parentid: 10, childid: 1)
     childgroup.invalidate_cache_group(parentid: 10)
 
-    paths = childgroup.path_multi([{parentid: 10, childid: 20}, {parentid: 11, childid: 21}])
+    paths = childgroup.path_multi([{ parentid: 10, childid: 20 }, { parentid: 11, childid: 21 }])
 
     expected = {
       { parentid: 10, childid: 20 } => "#{@root}/parentgroup/1/1/10/childgroup/1/2/20",
@@ -99,7 +99,6 @@ class IknowCache::Test < MiniTest::Test
     assert_equal(expected, paths)
   end
 
-
   def test_invalidate_group
     group = IknowCache.register_group(:group, :id)
     assert_equal("#{@root}/group/1/1/10", group.path(id: 10))
@@ -116,7 +115,6 @@ class IknowCache::Test < MiniTest::Test
     assert_equal("#{@root}/parentgroup/5/1/11/childgroup/6/1/20", childgroup.path(parentid: 11, childid: 20))
   end
 
-
   def test_access
     group = IknowCache.register_group(:group, :id)
     cache = group.register_cache(:store)
@@ -124,25 +122,27 @@ class IknowCache::Test < MiniTest::Test
 
     assert_nil(cache.read(key))
 
-    cache.write(key, "hello")
+    cache.write(key, 'hello')
 
-    assert_equal("hello", cache.read(key))
+    assert_equal('hello', cache.read(key))
 
-    assert_equal("hello", cache.fetch(key){ "goodbye" })
+    assert_equal('hello', cache.fetch(key) { 'goodbye' })
 
     cache.delete(key)
 
     assert_nil(cache.read(key))
 
-    assert_equal("goodbye", cache.fetch(key){ "goodbye" })
+    assert_equal('goodbye', cache.fetch(key) { 'goodbye' })
   end
 
   def test_access_multi
     group = IknowCache.register_group(:group, :id)
     cache = group.register_cache(:store)
 
-    data = {{id: 1} => "hello",
-            {id: 2} => "goodbye"}
+    data = {
+      { id: 1 } => 'hello',
+      { id: 2 } => 'goodbye',
+    }
 
     cache.write_multi(data)
 
@@ -154,13 +154,13 @@ class IknowCache::Test < MiniTest::Test
     group = IknowCache.register_group(:group, :id)
     cache = group.register_cache(:store)
 
-    cache.write({id: 1}, "hello")
-    cache.write({id: 2}, "goodbye")
+    cache.write({ id: 1 }, 'hello')
+    cache.write({ id: 2 }, 'goodbye')
 
-    group.delete_all({id: 1})
+    group.delete_all({ id: 1 })
 
-    assert_nil(cache.read({id: 1}))
-    assert_equal("goodbye", cache.read({id: 2}))
+    assert_nil(cache.read({ id: 1 }))
+    assert_equal('goodbye', cache.read({ id: 2 }))
   end
 
   def test_double_configre
