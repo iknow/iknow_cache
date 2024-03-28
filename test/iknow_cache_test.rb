@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class IknowCache::Test < MiniTest::Test
+class IknowCache::Test < Minitest::Test
   def setup
     IknowCache.cache.clear
     @root = IknowCache::CacheGroup::ROOT_PATH
