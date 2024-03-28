@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'active_support/version'
+
 class IknowCache
   Config = Struct.new(:logger, :cache)
 
@@ -18,11 +20,11 @@ class IknowCache
   end
 
   def self.configured?
-    ! config.nil?
+    !config.nil?
   end
 
   def self.configure!(&block)
-    raise ArgumentError.new("Already configured!") if configured?
+    raise ArgumentError.new('Already configured!') if configured?
 
     config = Config.new
     ConfigWriter.new(config).instance_eval(&block)
@@ -69,8 +71,8 @@ class IknowCache
       group
     end
 
-    def register_cache(name, cache_options: nil)
-      c = Cache.new(self, name, cache_options)
+    def register_cache(name, static_version: nil, cache_options: nil)
+      c = Cache.new(self, name, static_version, cache_options)
       @caches << c
       c
     end
@@ -193,12 +195,13 @@ class IknowCache
   class Cache
     DEBUG = false
 
-    attr_reader :name, :cache_options, :cache_group
+    attr_reader :name, :static_version, :cache_options, :cache_group
 
-    def initialize(cache_group, name, cache_options)
-      @cache_group   = cache_group
-      @name          = name
-      @cache_options = IknowCache.merge_options(cache_group.default_options, cache_options).try { |x| x.dup.freeze }
+    def initialize(cache_group, name, static_version, cache_options)
+      @cache_group    = cache_group
+      @name           = name
+      @static_version = static_version
+      @cache_options  = IknowCache.merge_options(cache_group.default_options, cache_options).try { |x| x.dup.freeze }
     end
 
     def fetch(key, parent_path: nil, **options, &block)
@@ -232,6 +235,19 @@ class IknowCache
       IknowCache.cache.delete(p, IknowCache.merge_options(cache_options, options))
     end
 
+    def fetch_multi(keys, write_options = nil)
+      results = read_multi(keys)
+
+      missing_keys = keys - results.keys
+      if missing_keys.present?
+        loaded_results = yield(missing_keys)
+        write_multi(loaded_results, write_options)
+        results.merge!(loaded_results)
+      end
+
+      results
+    end
+
     def read_multi(keys)
       return {} if keys.blank?
 
@@ -240,9 +256,7 @@ class IknowCache
 
       IknowCache.logger.debug("Cache Multi-Read: #{key_paths.values.inspect}") if DEBUG
       raw = IknowCache.cache.read_multi(*key_paths.values)
-      vs = raw.each_with_object({}) do |(path, value), h|
-        h[path_keys[path]] = value
-      end
+      vs = raw.transform_keys { |path| path_keys[path] }
       IknowCache.logger.debug("=> #{vs.inspect}") if DEBUG
       vs
     end
@@ -256,6 +270,23 @@ class IknowCache
       entries.each do |key, value|
         IknowCache.logger.debug("Cache Multi-Write: #{key_paths[key]}") if DEBUG
         IknowCache.cache.write(key_paths[key], value, options)
+      end
+    end
+
+    if Gem::Version.new(ActiveSupport::VERSION::STRING) >= Gem::Version.new('6.1')
+      def delete_multi(keys, **options)
+        return if keys.blank?
+
+        key_paths = path_multi(keys)
+
+        IknowCache.logger.debug("Cache Delete Multi: #{key_paths}") if DEBUG
+        IknowCache.cache.delete_multi(key_paths.values, IknowCache.merge_options(cache_options, options))
+      end
+    else
+      def delete_multi(keys, **options)
+        keys.each do |key|
+          delete(key, **options)
+        end
       end
     end
 
@@ -277,7 +308,9 @@ class IknowCache
     end
 
     def path_string(group_path)
-      "#{group_path}/#{self.name}"
+      path = "#{group_path}/#{self.name}"
+      path = "#{path}/#{self.static_version}" if static_version
+      path
     end
   end
 
