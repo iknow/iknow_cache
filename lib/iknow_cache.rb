@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'active_support/version'
+
 class IknowCache
   Config = Struct.new(:logger, :cache)
 
@@ -233,6 +235,19 @@ class IknowCache
       IknowCache.cache.delete(p, IknowCache.merge_options(cache_options, options))
     end
 
+    def fetch_multi(keys, write_options = nil)
+      results = read_multi(keys)
+
+      missing_keys = keys - results.keys
+      if missing_keys.present?
+        loaded_results = yield(missing_keys)
+        write_multi(loaded_results, write_options)
+        results.merge!(loaded_results)
+      end
+
+      results
+    end
+
     def read_multi(keys)
       return {} if keys.blank?
 
@@ -255,6 +270,23 @@ class IknowCache
       entries.each do |key, value|
         IknowCache.logger.debug("Cache Multi-Write: #{key_paths[key]}") if DEBUG
         IknowCache.cache.write(key_paths[key], value, options)
+      end
+    end
+
+    if Gem::Version.new(ActiveSupport::VERSION::STRING) >= Gem::Version.new('6.1')
+      def delete_multi(keys, **options)
+        return if keys.blank?
+
+        key_paths = path_multi(keys)
+
+        IknowCache.logger.debug("Cache Delete Multi: #{key_paths}") if DEBUG
+        IknowCache.cache.delete_multi(key_paths.values, IknowCache.merge_options(cache_options, options))
+      end
+    else
+      def delete_multi(keys, **options)
+        keys.each do |key|
+          delete(key, **options)
+        end
       end
     end
 

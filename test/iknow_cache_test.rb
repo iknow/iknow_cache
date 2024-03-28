@@ -156,6 +156,49 @@ class IknowCache::Test < MiniTest::Test
     assert_equal(data, values)
   end
 
+  def test_fetch_multi
+    group = IknowCache.register_group(:group, :id)
+    cache = group.register_cache(:store)
+
+    data = {
+      { id: 1 } => 'hello',
+      { id: 2 } => 'goodbye',
+    }
+
+    new_data = {
+      { id: 3 } => 'added',
+      { id: 4 } => 'extra',
+    }
+
+    all_data = data.merge(new_data)
+
+    cache.write_multi(data)
+
+    cache.fetch_multi(all_data.keys) do |missing_keys|
+      assert_equal(new_data.keys, missing_keys)
+      new_data
+    end
+
+    values = cache.read_multi(all_data.keys)
+    assert_equal(all_data, values)
+  end
+
+  def test_delete_multi
+    group = IknowCache.register_group(:group, :id)
+    cache = group.register_cache(:store)
+
+    data = {
+      { id: 1 } => 'hello',
+      { id: 2 } => 'goodbye',
+    }
+
+    cache.write_multi(data)
+    cache.delete_multi(data.keys)
+    values = cache.read_multi(data.keys)
+
+    assert_equal({}, values)
+  end
+
   def test_delete_from_group
     group = IknowCache.register_group(:group, :id)
     cache = group.register_cache(:store)
